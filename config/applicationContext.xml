@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:util="http://www.springframework.org/schema/util"
+	xsi:schemaLocation="
+http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util.xsd">
+
+	<!-- creates a java.util.Properties instance with values loaded from the 
+		supplied location -->
+	<util:properties id="appProperties" location="file:///home/alberto/git/SkyGuardianFTPService/config/application.properties" />
+
+	<bean id="ftpManager" class="mx.skyguardian.ftp.service.business.SkyguardianFTPManager">
+		<property name="appProperties" ref="appProperties"></property>
+	</bean>
+
+	<!-- specifing class and method that is going to be called on a specified time basis -->
+	<bean id="skyguardianFTPQuartzJob" class="org.springframework.scheduling.quartz.MethodInvokingJobDetailFactoryBean">
+		<property name="targetObject" ref="ftpManager" />
+		<property name="targetMethod" value="sendFilesToFTPServer" />
+	</bean>
+
+	<!-- simple trigger specify repeat interval and delay time -->
+	<bean id="simpleTrigger"
+		class="org.springframework.scheduling.quartz.SimpleTriggerFactoryBean">
+		<property name="jobDetail" ref="skyguardianFTPQuartzJob" />
+		<!-- Interval 15 minutes -->
+		<property name="repeatInterval" value="300000" /><!-- 1000 = 1 sec -->
+	</bean>
+
+	<!-- scheduler factory bean to bind,the executing code and time intervals together -->
+	<bean class="org.springframework.scheduling.quartz.SchedulerFactoryBean">
+		<property name="jobDetails">
+			<list>
+				<ref bean="skyguardianFTPQuartzJob" />
+			</list>
+		</property>
+		<property name="triggers">
+			<list>
+				<ref bean="simpleTrigger" />
+			</list>
+		</property>
+	</bean>
+</beans>
