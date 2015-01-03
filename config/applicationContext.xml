@@ -8,11 +8,16 @@ http://www.springframework.org/schema/util http://www.springframework.org/schema
 	<!-- creates a java.util.Properties instance with values loaded from the 
 		supplied location -->
 	<util:properties id="appProperties" location="file:///home/alberto/git/SkyGuardianFTPService/config/application.properties" />
-
-	<bean id="ftpManager" class="mx.skyguardian.ftp.service.business.SkyguardianFTPManager">
+	
+	<bean id="gurtamHTTPRequestExecutor" class="mx.skyguardian.ftp.service.ws.GurtamHTTPRequestExecutor">
 		<property name="appProperties" ref="appProperties"></property>
 	</bean>
 
+	<bean id="ftpManager" class="mx.skyguardian.ftp.service.business.SkyguardianFTPManager">
+		<property name="appProperties" ref="appProperties"></property>
+		<property name="httpRequestExecutor" ref="gurtamHTTPRequestExecutor"></property>
+	</bean>
+	
 	<!-- specifing class and method that is going to be called on a specified time basis -->
 	<bean id="skyguardianFTPQuartzJob" class="org.springframework.scheduling.quartz.MethodInvokingJobDetailFactoryBean">
 		<property name="targetObject" ref="ftpManager" />

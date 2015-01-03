@@ -12,10 +12,10 @@
 	<!-- context:property-placeholder location="classpath:user.properties"/ -->
 
 	<bean id="ftpClientFactory" class="org.springframework.integration.ftp.session.DefaultFtpSessionFactory">
-		<property name="host" value="IP"/>
+		<property name="host" value="216.154.211.32"/>
 		<!--property name="port" value="${availableServerPort}"/ -->
-		<property name="username" value="USERNAME"/>
-		<property name="password" value="PASSWORD"/>
+		<property name="username" value="skyguardian"/>
+		<property name="password" value="$kygu@rd1an"/>
 	</bean>
 
 	<int:channel id="ftpChannel"/>

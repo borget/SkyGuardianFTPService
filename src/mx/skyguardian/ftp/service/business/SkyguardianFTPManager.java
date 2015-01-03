@@ -8,6 +8,10 @@ import java.util.Properties;
 
 import javax.annotation.Resource;
 
+import mx.skyguardian.ftp.service.bean.WialonSession;
+import mx.skyguardian.ftp.service.utils.Constants;
+import mx.skyguardian.ftp.service.ws.IGurtamHTTPRequestExecutor;
+
 import org.apache.commons.io.FileUtils;
 import org.apache.log4j.Logger;
 import org.springframework.context.support.FileSystemXmlApplicationContext;
@@ -19,8 +23,8 @@ public class SkyguardianFTPManager implements ISkyguardianFTPManager {
 	private static Logger log = Logger.getLogger(SkyguardianFTPManager.class);
 	@Resource(name = "appProperties")
 	private Properties appProperties;
-	
-	
+	private IGurtamHTTPRequestExecutor httpRequestExecutor;
+
 	public static void main (String ... args) {
 
 		Map<String, String> env = System.getenv();
@@ -46,6 +50,12 @@ public class SkyguardianFTPManager implements ISkyguardianFTPManager {
 	private final File baseFolder = new File("/home/alberto/git/SkyGuardianFTPService/test/virtual");
 	@Override
 	public void sendFilesToFTPServer() {
+		WialonSession session = httpRequestExecutor.doLogin(
+				appProperties.getProperty("mx.skyguardian.ftpservice.gurtam.user"),
+				appProperties.getProperty("mx.skyguardian.ftpservice.gurtam.password"));
+		
+		httpRequestExecutor.getUnits(session.getEid(), Constants.FLAGS_0x00100401);
+		
 		log.debug("sending files to FTP server...");
 		FileSystemXmlApplicationContext ctx = new FileSystemXmlApplicationContext(
 				"file:/home/alberto/git/SkyGuardianFTPService/config/FtpOutboundChannelAdapter-context.xml");
@@ -73,5 +83,15 @@ public class SkyguardianFTPManager implements ISkyguardianFTPManager {
 
 	public void setAppProperties(Properties appProperties) {
 		this.appProperties = appProperties;
+	}
+	
+	
+	public IGurtamHTTPRequestExecutor getHttpRequestExecutor() {
+		return httpRequestExecutor;
+	}
+
+	public void setHttpRequestExecutor(
+			IGurtamHTTPRequestExecutor httpRequestExecutor) {
+		this.httpRequestExecutor = httpRequestExecutor;
 	}
 }
