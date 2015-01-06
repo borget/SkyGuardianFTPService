@@ -2,8 +2,8 @@ package mx.skyguardian.ftp.service.bean;
 
 public class WialonSession {
 	private User user = null;
-	private String eid = "";
-	private Long tm = 0L;
+	private String eid = null;
+	private Long tm = null;
 
 	public WialonSession () {
 		
@@ -18,9 +18,9 @@ public class WialonSession {
 	}
 		
 	public class User {
-		private String nm;
-		private String password;
-		private String id;
+		private String nm = null;
+		private String password = null;
+		private String id = null;
 		
 		public String getNm() {
 			return nm;

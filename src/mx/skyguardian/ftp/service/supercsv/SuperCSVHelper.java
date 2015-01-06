@@ -1,7 +1,6 @@
 package mx.skyguardian.ftp.service.supercsv;
 
 import java.io.FileWriter;
-import java.util.Arrays;
 import java.util.List;
 
 import mx.skyguardian.ftp.service.bean.Unit;
@@ -22,30 +21,11 @@ public class SuperCSVHelper {
 		
 	}
 	
-	public static void main (String ... args) throws Exception{
-		writeCSVToFile();
-	}
-	
-	public static void writeCSVToFile() throws Exception {
-		// create the customer beans
-		final Unit dra1405 = new Unit(
-				"1405",
-				"01/01/2015",
-				"12:00:00",
-				"232323");
-		
-		final Unit dra1423 = new Unit(
-				"1413",
-				"01/01/2015",
-				"12:00:00",
-				"232323");
-		
-		final List<Unit> units = Arrays.asList(dra1405, dra1423);
-
+	public void writeCSVToFile(final List<Unit> units, String fileName) throws Exception {
 		ICsvBeanWriter beanWriter = null;
 		try {
 			beanWriter = new CsvBeanWriter(new FileWriter(
-					"/home/alberto/git/SkyGuardianFTPService/test/reporte_010115_114300.csv"),
+					fileName),
 					PIPE_DELIMITED);
 
 			// the header elements are used to map the bean values to each
@@ -63,6 +43,8 @@ public class SuperCSVHelper {
 			}
 			
 			log.info("CSV file created");
+		} catch (Exception e){
+			throw new Exception("Error writing CSV to File. "+ e.getMessage());
 		} finally {
 			if (beanWriter != null) {
 				beanWriter.close();
@@ -70,7 +52,7 @@ public class SuperCSVHelper {
 		}
 	}
 
-	private static CellProcessor[] getProcessors() {
+	private CellProcessor[] getProcessors() {
 		final CellProcessor[] processors = new CellProcessor[] {
 				new UniqueHashCode(), // unitId (must be unique)
 				new NotNull(), // fecha

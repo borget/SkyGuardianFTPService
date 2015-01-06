@@ -13,9 +13,13 @@ http://www.springframework.org/schema/util http://www.springframework.org/schema
 		<property name="appProperties" ref="appProperties"></property>
 	</bean>
 
+	<bean id="superCSVHelper" class="mx.skyguardian.ftp.service.supercsv.SuperCSVHelper">
+	</bean>
+	
 	<bean id="ftpManager" class="mx.skyguardian.ftp.service.business.SkyguardianFTPManager">
 		<property name="appProperties" ref="appProperties"></property>
 		<property name="httpRequestExecutor" ref="gurtamHTTPRequestExecutor"></property>
+		<property name="superCSVHelper" ref="superCSVHelper"></property>
 	</bean>
 	
 	<!-- specifing class and method that is going to be called on a specified time basis -->
