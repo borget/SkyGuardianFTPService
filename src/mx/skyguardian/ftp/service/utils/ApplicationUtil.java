@@ -1,18 +1,25 @@
 package mx.skyguardian.ftp.service.utils;
 
+import java.io.BufferedOutputStream;
+import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.GregorianCalendar;
 import java.util.Map;
 import java.util.Properties;
 import java.util.TimeZone;
 
+import org.apache.log4j.Logger;
 import org.springframework.util.PropertyPlaceholderHelper;
 
 public class ApplicationUtil {
-	
+	private static Logger log = Logger.getLogger(ApplicationUtil.class);
 	private ApplicationUtil () {
 	}
 	
-	public static String getURL(String url, Map<String, String> propertiesMap) {
+	public static String getProperty(String url, Map<String, String> propertiesMap) {
 		PropertyPlaceholderHelper h = new PropertyPlaceholderHelper("$[", "]");
 		Properties p = new Properties();
 
@@ -39,6 +46,23 @@ public class ApplicationUtil {
 		}
 		
 		return fechaHoraEvento;
+	}
+	
+	public static void writeXMLFile(String fullFileName, String fileData) throws Exception {
+		OutputStream out = null;
+		try{
+			byte data[] = fileData.getBytes();
+			Path path = Paths.get(fullFileName);
+			out = new BufferedOutputStream(Files.newOutputStream(path,
+					StandardOpenOption.CREATE_NEW));
+			out.write(data, 0, data.length);
+			log.info("XML_CREATED>>>Successfully wrote file [" + fullFileName + "]");
+		}
+		finally{
+			if (out != null) {
+				out.close();
+			}
+		}
 	}
 	
 }

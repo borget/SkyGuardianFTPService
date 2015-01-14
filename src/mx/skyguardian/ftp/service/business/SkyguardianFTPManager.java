@@ -5,17 +5,20 @@ import java.io.FileInputStream;
 import java.io.InputStream;
 import java.text.SimpleDateFormat;
 import java.util.GregorianCalendar;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
 import javax.annotation.Resource;
+
 import mx.skyguardian.ftp.service.bean.Unit;
 import mx.skyguardian.ftp.service.bean.WialonSession;
 import mx.skyguardian.ftp.service.supercsv.SuperCSVHelper;
 import mx.skyguardian.ftp.service.utils.ApplicationUtil;
 import mx.skyguardian.ftp.service.utils.Constants;
 import mx.skyguardian.ftp.service.ws.IGurtamHTTPRequestExecutor;
+
 import org.apache.commons.io.FileUtils;
 import org.apache.log4j.Logger;
 import org.springframework.context.support.FileSystemXmlApplicationContext;
@@ -34,10 +37,15 @@ public class SkyguardianFTPManager implements ISkyguardianFTPManager {
 	private static String SG_FTP_CHANNEL_CONTEXT = null;
 	
 	public static void main (String ... args) {
-
 		Map<String, String> envVariablesMap = System.getenv();
-
-        if (envVariablesMap.get("SG_FTP_APP_CONTEXT") != null &&
+		if(args.length > 0 && args[0].equals("DEBUG_MODE")){
+			System.out.println("DEBUG_MODE enabled...");
+			SkyguardianFTPManager.SG_FTP_CHANNEL_CONTEXT = "/home/alberto/git/SkyGuardianFTPService/config/FtpOutboundChannelAdapter-context.xml";
+        	SkyguardianFTPManager.SG_BASE_FOLDER = new File("/home/alberto/git/SkyGuardianFTPService/test");
+        	SkyguardianFTPManager.SG_TEMP_FOLDER = new File("/home/alberto/git/SkyGuardianFTPService/test/temp");
+        	new FileSystemXmlApplicationContext("file:/home/alberto/git/SkyGuardianFTPService/config/applicationContext.xml");
+		}
+		else if (envVariablesMap.get("SG_FTP_APP_CONTEXT") != null &&
         	envVariablesMap.get("SG_FTP_CHANNEL_CONTEXT") != null &&
         	envVariablesMap.get("SG_BASE_FOLDER") != null &&
         	envVariablesMap.get("SG_TEMP_FOLDER") != null){
@@ -47,7 +55,7 @@ public class SkyguardianFTPManager implements ISkyguardianFTPManager {
         	SkyguardianFTPManager.SG_TEMP_FOLDER = new File(envVariablesMap.get("SG_TEMP_FOLDER"));
         	new FileSystemXmlApplicationContext("file:"+envVariablesMap.get("SG_FTP_APP_CONTEXT"));
         } else {
-        	System.err.println("ERROR:The required env variables are not properly set.");
+        	System.err.println("ERROR:The required env variables are not properly set or incorrect ARGS parameter.");
         	Runtime.getRuntime().exit(0);
         }
 	}
@@ -55,27 +63,42 @@ public class SkyguardianFTPManager implements ISkyguardianFTPManager {
 	@Override
 	public void sendFilesToFTPServer() {
 		try {
-			WialonSession session = httpRequestExecutor.doLogin(
-					appProperties.getProperty("mx.skyguardian.ftpservice.gurtam.user"),
-					appProperties.getProperty("mx.skyguardian.ftpservice.gurtam.password"));
-			List<Unit> units = httpRequestExecutor.getUnits(session.getEid(), Constants.FLAGS_0x00100401);
-			String fullFileName = SkyguardianFTPManager.SG_BASE_FOLDER+File.separator+getFileName(session.getTm());
+			WialonSession session = this.httpRequestExecutor.doLogin(
+					this.appProperties.getProperty("mx.skyguardian.ftpservice.gurtam.user"),
+					this.appProperties.getProperty("mx.skyguardian.ftpservice.gurtam.password"));
+			List<Unit> units = this.httpRequestExecutor.getUnits(session.getEid(), Constants.FLAGS_0x00100401);
+			String csvFileNameWithExt = getFileName(session.getTm())+".csv";
+			String fullFileName = SkyguardianFTPManager.SG_BASE_FOLDER+File.separator+csvFileNameWithExt;
 			this.superCSVHelper.writeCSVToFile(units, fullFileName);
-			String fileName = getFileName(session.getTm());
-			this.sendFileToFTPServer(fileName);
+			this.sendFileToFTPServer(csvFileNameWithExt);
+			String xmlFileNameWithExt = getFileName(session.getTm())+".xml";
+			this.createSendXMLFileToFTPServer(xmlFileNameWithExt);
+			
 		} catch (Exception e) {
 			log.error(e.getMessage());
 		}
+	}
+	
+	private void createSendXMLFileToFTPServer (String xmlFileNameWithExt) throws Exception {
+		Map<String, String> properties = new HashMap<String, String>();
+		properties.put("user", this.appProperties.getProperty("mx.skyguardian.ftpservice.gurtam.user"));
+		properties.put("password", this.appProperties.getProperty("mx.skyguardian.ftpservice.gurtam.password.encrypted"));
+		String unitsUrl = ApplicationUtil.getProperty(
+				this.appProperties.getProperty("mx.skyguardian.ftpservice.controltower.units"),properties);
+		String unitsXml = this.httpRequestExecutor.getHTTPRequest(unitsUrl);	
+		String xmlFileName = SkyguardianFTPManager.SG_BASE_FOLDER+File.separator+xmlFileNameWithExt;
+		ApplicationUtil.writeXMLFile(xmlFileName, unitsXml);
+		this.sendFileToFTPServer(xmlFileNameWithExt);
 	}
 	
 	private String getFileName(Long gurtamLoginTime) throws Exception{
 		String fileName = null;
 		if (gurtamLoginTime != null) {
 			GregorianCalendar loginTime = ApplicationUtil.getDatetimeByTimeZone(
-					appProperties.getProperty("mx.skyguardian.ftpservice.timezone"), 
+					this.appProperties.getProperty("mx.skyguardian.ftpservice.timezone"), 
 					gurtamLoginTime);
 			
-			SimpleDateFormat fileFormat = new SimpleDateFormat(appProperties.getProperty("mx.skyguardian.ftpservice.filenameformat"));
+			SimpleDateFormat fileFormat = new SimpleDateFormat(this.appProperties.getProperty("mx.skyguardian.ftpservice.filenameformat"));
 			fileName = fileFormat.format(loginTime.getTime());
 		} else {
 			throw new Exception("Error getting login time to generate the csv file name.");
@@ -90,12 +113,13 @@ public class SkyguardianFTPManager implements ISkyguardianFTPManager {
 			MessageChannel ftpChannel = ctx.getBean("ftpChannel", MessageChannel.class);
 			SkyguardianFTPManager.SG_BASE_FOLDER.mkdirs();
 			final File fileToSend = new File(SkyguardianFTPManager.SG_TEMP_FOLDER+File.separator, fileName);
-			final InputStream inputStreamA = new FileInputStream(SkyguardianFTPManager.SG_BASE_FOLDER+File.separator+fileName);
-			FileUtils.copyInputStreamToFile(inputStreamA, fileToSend);
-			final Message<File> messageA = MessageBuilder.withPayload(fileToSend).build();
-			ftpChannel.send(messageA);
+			final InputStream inputStream = new FileInputStream(SkyguardianFTPManager.SG_BASE_FOLDER+File.separator+fileName);
+			FileUtils.copyInputStreamToFile(inputStream, fileToSend);
+			final Message<File> message = MessageBuilder.withPayload(fileToSend).build();
+			ftpChannel.send(message);
 
 			log.info("FTP_SERVICE>>>Successfully transfered file [" + fileName + "] to the remote FTP location.");
+			
 		} catch(Exception e) {
 			throw new Exception("Error sending CSV to FTP Server. " + e.getMessage());
 		} finally {

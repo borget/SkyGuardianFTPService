@@ -42,7 +42,7 @@ public class SuperCSVHelper {
 				beanWriter.write(unit, fieldMapping, processors);
 			}
 			
-			log.info("CSV file created");
+			log.info("CSV_CREATED>>>Successfully created file [" + fileName + "]");
 		} catch (Exception e){
 			throw new Exception("Error writing CSV to File. "+ e.getMessage());
 		} finally {

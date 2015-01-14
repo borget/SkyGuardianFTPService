@@ -1,5 +1,10 @@
 package mx.skyguardian.ftp.service.ws;
 
+import java.io.BufferedInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.GregorianCalendar;
@@ -24,12 +29,43 @@ public class GurtamHTTPRequestExecutor implements IGurtamHTTPRequestExecutor {
 	@Resource(name = "appProperties")
 	private Properties appProperties;
 	
+	public String getHTTPRequest(String urlString) throws Exception {
+
+		InputStream inputStream = null;
+		String jsonString = null;
+		try {
+			URL url = new URL(urlString);
+			HttpURLConnection connection = (HttpURLConnection) url
+					.openConnection();
+			connection.setRequestMethod("GET");
+			connection.setRequestProperty("Content-Type", "application/xml; charset=utf-8");
+
+			inputStream = new BufferedInputStream(connection.getInputStream());
+
+			ByteArrayOutputStream dataCache = new ByteArrayOutputStream();
+
+			byte[] buff = new byte[1024];
+			int len;
+			while ((len = inputStream.read(buff)) >= 0) {
+				dataCache.write(buff, 0, len);
+			}
+			dataCache.close();
+			jsonString = new String(dataCache.toByteArray()).trim();
+					
+		} finally {
+			if (null != inputStream) {
+				inputStream.close();
+			}
+		}
+		return jsonString;
+	}
+	
 	public WialonSession doLogin(String userName, String password) throws Exception {
 		WialonSession wialonSession = null;
 		Map<String, String> properties = new HashMap<String, String>();
 		properties.put("user", userName);
 		properties.put("password", password);
-		String loginUrl = ApplicationUtil.getURL(appProperties.getProperty("mx.skyguardian.ftpservice.login.url"), properties);
+		String loginUrl = ApplicationUtil.getProperty(appProperties.getProperty("mx.skyguardian.ftpservice.login.url"), properties);
 		ObjectMapper mapper = JsonFactory.create();
 		wialonSession = mapper.readValue(HTTP.getJSON(loginUrl, null), WialonSession.class);
 		
@@ -45,13 +81,13 @@ public class GurtamHTTPRequestExecutor implements IGurtamHTTPRequestExecutor {
 	@SuppressWarnings("rawtypes")
 	@Override
 	public List<Unit> getUnits(String eid, String flags) throws Exception {
-		log.debug("getUnits...");
+		log.debug("GETTING UNITS FROM GURTAM PLATFORM ...");
 		List<Unit> units = new ArrayList<Unit>();
 		Map<String, String> properties = new HashMap<String, String>();
 		properties.put("sid", eid);
 		properties.put("flags", flags);
 
-		String unitsUrl = ApplicationUtil.getURL(
+		String unitsUrl = ApplicationUtil.getProperty(
 				appProperties.getProperty("mx.skyguardian.ftpservice.units.url"),
 				properties);
 		
